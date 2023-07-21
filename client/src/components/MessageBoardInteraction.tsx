@@ -63,10 +63,11 @@ const MessageBoardInteraction: React.FC = () => {
 
 	const { library, account } = useWeb3React();
 
-
+	const isConnected = !!account;
+	const myAddress = account
 
 	const [messagesCount, setMessagesCount] = React.useState<undefined | number>(undefined)
-	const [messages, setMessages] = React.useState<string[]>([])
+	const [messages, setMessages] = React.useState<{ author: string, content: string }[]>([])
 	const [messageInput, setMessageInput] = React.useState<string>('')
 
 	const refreshMessageCount = React.useCallback(async () => {
@@ -88,10 +89,10 @@ const MessageBoardInteraction: React.FC = () => {
 	}, [library, messagesCount]);
 
 	React.useEffect(() => {
-		if (library && account) {
+		if (library) {
 			refreshMessageCount()
 		}
-	}, [library, account, refreshMessageCount])
+	}, [library, refreshMessageCount])
 
 
 	React.useEffect(() => {
@@ -100,7 +101,8 @@ const MessageBoardInteraction: React.FC = () => {
 		}
 	}, [fetchMessages, messagesCount])
 
-	const storeMessage = async () => {
+	const onStoreMessage = async (event: { preventDefault: () => void; }) => {
+		event.preventDefault();
 		const contract = new ethers.Contract(contractAddress, contractABI, library.getSigner());
 		const tx = await contract.writeMessage(messageInput);
 		await tx.wait();
@@ -109,12 +111,43 @@ const MessageBoardInteraction: React.FC = () => {
 	return (
 		<>
 			<div>
-				<h1>Message count: {!!messagesCount ? messagesCount : '0'}</h1>
-				{messages.map((message, key) => <div key={key}>{message}</div>)}
+				<h1>Message board</h1>
+				<h4>{!!messagesCount ? messagesCount.toLocaleString() : '0'} message(s)</h4>
+				{library === undefined && <>[We use your wallet to call the network, so connect it to see messages.]</>}
+				{!!messagesCount && <>
+					<table>
+						<thead><th>from</th><th>message</th></thead>
+
+						{messages.map((message, key) => <tr key={key}>
+							<td>
+								<span
+									style={
+										myAddress === message.author ? { textDecoration: 'underline' } : {}
+									}
+								>{message.author}
+								</span>
+
+
+								<strong></strong></td>
+							<td>{message.content}</td>
+						</tr>)}
+					</table>
+				</>}
 			</div>
 			<hr />
-			<input type="text" value={messageInput} onChange={e => setMessageInput(e.currentTarget.value)} />
-			<button onClick={storeMessage}>store message</button>
+			{
+				isConnected && <>
+					<form onSubmit={onStoreMessage}>
+						<input type="text" value={messageInput} onChange={e => setMessageInput(e.currentTarget.value)} />
+						<button type="submit">store message (as {account})</button>
+					</form>
+				</>
+			}
+			{
+				!isConnected && <>
+					<div>[you must connect your wallet to post a message]<br /><br /></div>
+				</>
+			}
 		</>
 	);
 };
