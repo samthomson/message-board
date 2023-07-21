@@ -1,4 +1,4 @@
-const MyContract = artifacts.require("Escrow");
+const MyContract = artifacts.require("MessageBoard");
 
 module.exports = function (deployer) {
 	deployer.deploy(MyContract);
